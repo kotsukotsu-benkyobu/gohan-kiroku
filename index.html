@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>コツコツごはん記録</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-column phone notebook — today's ring up top, meal slots as ruled sections, add-sheet slides up from the bottom */
+:root{
+  --bg:#F3F6F0; --surface:#FFFFFF; --surface2:#E6EEE1; --line:#D3DFCC;
+  --fg:#1F2B24; --muted:#5D6E63; --accent:#2E7D4F; --accent-ink:#FFFFFF; --accent-soft:#DCEBDD;
+  --rice:#E0A92E; --p:#D2574F; --f:#E08A2E; --c:#3C8DB5;
+  --good:#2E7D4F; --warn:#C47A12; --low:#B24A44;
+  --font-display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Noto Sans JP",sans-serif;
+  --font-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --r:16px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121915; --surface:#1A231E; --surface2:#233029; --line:#2F3D35;
+  --fg:#E7EFE9; --muted:#9DB0A4; --accent:#5DBB82; --accent-ink:#0E1A13; --accent-soft:#1F3A2A;
+  --rice:#E9BD55; --p:#E58079; --f:#EEA35A; --c:#6CB2D6;
+  --good:#5DBB82; --warn:#E3A34A; --low:#E58079; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#121915; --surface:#1A231E; --surface2:#233029; --line:#2F3D35;
+  --fg:#E7EFE9; --muted:#9DB0A4; --accent:#5DBB82; --accent-ink:#0E1A13; --accent-soft:#1F3A2A;
+  --rice:#E9BD55; --p:#E58079; --f:#EEA35A; --c:#6CB2D6;
+  --good:#5DBB82; --warn:#E3A34A; --low:#E58079; color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 120px;display:grid;gap:16px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+header.top h1{font-size:22px;font-weight:900;color:var(--accent)}
+.daynav{display:flex;align-items:center;gap:4px}
+.daynav button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px}
+.daynav .label{min-width:110px;text-align:center;font-weight:700}
+.daynav .label small{display:block;font-weight:400;font-size:12px;color:var(--muted);line-height:1.2}
+
+.banner{background:var(--accent-soft);border-radius:12px;padding:10px 14px;font-size:13px}
+.banner[data-kind="warn"]{background:color-mix(in srgb,var(--warn) 18%,var(--surface))}
+
+.summary{background:var(--surface);border-radius:var(--r);padding:18px;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border:1px solid var(--line)}
+.ring{position:relative;width:132px;height:132px}
+.ring svg{width:132px;height:132px;transform:rotate(-90deg)}
+.ring .center{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .kcal{font-family:var(--font-display);font-weight:900;font-size:28px;line-height:1}
+.ring .unit{font-size:12px;color:var(--muted)}
+.ring .pct{font-size:13px;font-weight:700;margin-top:2px}
+.pfc{display:grid;gap:10px;min-width:0}
+.bar-row{display:grid;grid-template-columns:4.6em 1fr;gap:8px;align-items:center;font-size:13px}
+.bar-row .lbl{font-weight:700}
+.bar-row .val{grid-column:2;font-size:12px;color:var(--muted);margin-top:-6px}
+.bar{height:10px;border-radius:6px;background:var(--surface2);overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:6px}
+.status{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px;background:var(--surface2)}
+.pill[data-s="good"]{background:color-mix(in srgb,var(--good) 20%,var(--surface));color:var(--good)}
+.pill[data-s="low"]{background:color-mix(in srgb,var(--low) 16%,var(--surface));color:var(--low)}
+.pill[data-s="over"]{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--warn)}
+
+.habit{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:6px;min-width:0}
+.tile .k{font-size:12px;color:var(--muted);font-weight:500}
+.tile .v{font-family:var(--font-display);font-weight:900;font-size:26px;line-height:1.1}
+.tile .v small{font-size:14px;font-weight:700}
+.stamps{display:flex;gap:6px}
+.stamp{flex:1;text-align:center;border-radius:10px;padding:4px 0;font-size:13px;font-weight:700;border:1.5px dashed var(--line);color:var(--muted)}
+.stamp.on{border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+
+.meals{display:grid;gap:12px}
+.meal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.meal-h{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:8px}
+.meal-h h2{font-size:17px;font-weight:700}
+.meal-h .sub{font-size:13px;color:var(--muted)}
+.meal-h .add{border:none;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:6px 14px;font-weight:700;font-size:14px;white-space:nowrap}
+.items{list-style:none;margin:0;padding:0}
+.items li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.items .name{font-weight:500;min-width:0}
+.items .name small{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.items .kc{font-weight:700;white-space:nowrap}
+.del{border:1px solid var(--line);background:var(--surface);color:var(--low);font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;white-space:nowrap}
+.del:hover{background:color-mix(in srgb,var(--low) 10%,var(--surface))}
+.in-sheet{display:grid;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.in-sheet .h{padding:8px 12px;font-size:13px;font-weight:700;color:var(--accent);background:var(--accent-soft)}
+.in-sheet .r{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:14px}
+.in-sheet .r .kc{font-weight:700}
+.toast button{margin-left:12px;border:none;background:none;color:inherit;font-weight:900;text-decoration:underline;font-size:14px}
+.empty{padding:0 14px 12px;font-size:13px;color:var(--muted)}
+
+.week{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:10px}
+.week h2{font-size:17px}
+.week svg{width:100%;height:auto;display:block}
+.week .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+
+.goals{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px}
+.goals summary{font-family:var(--font-display);font-weight:700;font-size:17px;cursor:pointer}
+.goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.goal-grid label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.goal-grid input{font:inherit;font-size:16px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.btn{border:none;background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px}
+.btn.ghost{background:var(--surface2);color:var(--fg)}
+.note{font-size:12px;color:var(--muted)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgb(0 0 0 / .4);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-radius:20px 20px 0 0;max-height:88%;max-height:88dvh;display:flex;flex-direction:column;overflow:hidden;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-in{max-width:560px;width:100%;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 14px;display:grid;gap:12px;align-content:start;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;min-height:0;flex:1 1 auto}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;padding-top:14px}
+.sheet-top{position:sticky;top:0;z-index:2;background:var(--surface);display:grid;gap:10px;box-shadow:0 6px 8px -8px rgb(0 0 0 / .25)}
+.sheet-top .sheet-h{padding-top:14px}
+.sheet-h h3{font-size:18px}
+.x{border:none;background:var(--surface2);border-radius:50%;width:36px;height:36px;font-size:18px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.cats{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line)}
+.cat{border:none;background:none;padding:8px 12px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.cat[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.btn.done{padding:8px 16px;font-size:14px;border-radius:999px}
+.sheet-foot{position:sticky;bottom:0;background:var(--surface);padding:10px 0 4px;border-top:1px solid var(--line);font-size:13px;font-weight:700;color:var(--accent)}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.menu-list{display:grid;gap:8px}
+.menu-btn{display:grid;grid-template-columns:1fr auto;gap:4px 10px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px}
+.menu-btn b{font-weight:700}
+.menu-btn small{grid-column:1/-1;color:var(--muted);font-size:12px}
+.menu-btn .kc{font-weight:700;color:var(--accent)}
+.lv{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;vertical-align:2px;white-space:nowrap}
+.lv[data-lv="good"]{background:color-mix(in srgb,var(--good) 18%,var(--surface));color:var(--good)}
+.lv[data-lv="mid"]{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--warn)}
+.lv[data-lv="avoid"]{background:color-mix(in srgb,var(--low) 16%,var(--surface));color:var(--low)}
+.caution{border-radius:12px;padding:10px 12px;background:var(--surface2);display:grid;gap:4px}
+.caution[data-lv="avoid"]{background:color-mix(in srgb,var(--low) 12%,var(--surface))}
+.caution[data-lv="mid"]{background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
+.caution[data-lv="good"]{background:color-mix(in srgb,var(--good) 12%,var(--surface))}
+.caution p{margin:0;font-size:13px}
+.opt{display:grid;gap:6px}
+.opt .chip .lv{margin-left:2px}
+.detail{display:grid;gap:12px}
+.rice{background:color-mix(in srgb,var(--rice) 14%,var(--surface));border-radius:12px;padding:12px;display:grid;gap:8px}
+.rice .row{display:flex;align-items:center;gap:10px}
+.rice .g{font-family:var(--font-display);font-weight:900;font-size:24px;min-width:4.5em;text-align:center}
+.step{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;font-weight:700}
+.preview{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.preview div{background:var(--surface2);border-radius:10px;padding:8px 4px}
+.preview b{display:block;font-size:17px}
+.preview span{font-size:11px;color:var(--muted)}
+.custom{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.custom label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.custom label.full{grid-column:1/-1}
+.custom input{font:inherit;font-size:16px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:700;z-index:30;font-size:14px}
+@media (max-width:420px){
+  .summary{grid-template-columns:1fr;justify-items:center}
+  .pfc{width:100%}
+}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}.ring circle{transition:stroke-dashoffset .5s ease}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>コツコツごはん記録</h1>
+    <div class="daynav">
+      <button id="prev" aria-label="前の日">‹</button>
+      <div class="label num" id="dayLabel">きょう</div>
+      <button id="next" aria-label="次の日">›</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="summary" aria-label="1日の合計">
+    <div class="ring">
+      <svg viewBox="0 0 132 132" aria-hidden="true">
+        <circle cx="66" cy="66" r="56" fill="none" stroke="var(--surface2)" stroke-width="12"></circle>
+        <circle id="ringArc" cx="66" cy="66" r="56" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="351.86" stroke-dashoffset="351.86"></circle>
+      </svg>
+      <div class="center">
+        <div class="kcal num" id="kcalNow">0</div>
+        <div class="unit num" id="kcalGoal">/ 1,400 kcal</div>
+        <div class="pct num" id="kcalPct">0%</div>
+      </div>
+    </div>
+    <div class="pfc" id="pfc"></div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="habit" aria-label="習慣">
+    <div class="tile">
+      <div class="k">連続記録</div>
+      <div class="v num" id="streak">0<small> 日</small></div>
+      <div class="note" id="streakNote">1食でも記録すればカウント</div>
+    </div>
+    <div class="tile">
+      <div class="k">きょうのスタンプ</div>
+      <div class="stamps" id="stamps"></div>
+      <div class="note" id="stampNote">朝・昼・夜を記録するとたまります</div>
+    </div>
+  </section>
+
+  <section class="meals" id="meals" aria-label="食事"></section>
+
+  <section class="week" aria-label="最近7日間">
+    <h2>最近7日間</h2>
+    <div id="weekChart"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--good)"></i>目標達成（85〜110%）</span>
+      <span><i class="dot" style="background:var(--warn)"></i>多め</span>
+      <span><i class="dot" style="background:var(--muted)"></i>記録あり</span>
+    </div>
+    <div class="note" id="weekNote"></div>
+  </section>
+
+  <details class="goals" id="goalsBox">
+    <summary>目標を設定する</summary>
+    <div class="goal-grid">
+      <label for="gKcal">カロリー（kcal）<input id="gKcal" type="number" inputmode="numeric" min="800" max="4000" step="50"></label>
+      <label for="gP">たんぱく質 P（g）<input id="gP" type="number" inputmode="numeric" min="20" max="250" step="5"></label>
+      <label for="gF">脂質 F（g）<input id="gF" type="number" inputmode="numeric" min="10" max="200" step="5"></label>
+      <label for="gC">炭水化物 C（g）<input id="gC" type="number" inputmode="numeric" min="50" max="500" step="5"></label>
+    </div>
+    <button class="btn" id="saveGoals">目標を保存</button>
+    <p class="note">初期値は1日1,400kcal・P80g・F40g・C190g。お腹が空いてつらい日や体を動かした日は、ご飯を増やして1,400〜1,600kcalに調整しましょう。食べなさすぎはリバウンドのもとです。<br>数値は日本食品標準成分表をもとにした1人分の目安です。</p>
+  </details>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-in" id="sheetIn"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+// ---------- Food data (per serving; rice counted separately so grams can change) ----------
+// Single dishes. unit:"g" = gram-selectable (per 100g values); others are per 1 serving
+const Z={kcal:0,p:0,f:0,c:0};
+const FOODS = {
+  主食:[
+    {id:"rice", name:"ご飯", unit:"g", def:150, n:{kcal:156,p:2.5,f:0.3,c:37.1}},
+    {id:"bread", name:"全粒粉パン（6枚切1枚）", n:{kcal:150,p:5,f:2.5,c:27}},
+    {id:"onigiri", name:"鮭おにぎり（1個）", n:{kcal:180,p:5,f:1.5,c:38}},
+  ],
+  "麺・丼":[
+    {id:"soba", name:"そば", n:{kcal:300,p:11,f:2,c:58}, lv:"good", note:"そばは低脂質でたんぱく質も摂れる麺。つゆは控えめに。", opts:[
+      {key:"style", label:"食べ方", type:"one", choices:[{id:"mori",name:"もり・ざる",short:"もり",n:Z},{id:"kake",name:"かけ（温）",short:"かけ",n:Z}]},
+      {key:"top", label:"トッピング", type:"many", choices:[
+        {id:"ebiten",name:"えび天2本",n:{kcal:180,p:6,f:11,c:14},lv:"avoid",note:"天ぷらは衣と油で脂質が多め。1本にするか、衣を少し外して。"},
+        {id:"kakiage",name:"かき揚げ",n:{kcal:350,p:4,f:24,c:30},lv:"avoid",note:"かき揚げは1枚で300kcal以上。食べるならほかの食事を軽めに。"},
+        {id:"kitsune",name:"きつね",n:{kcal:110,p:5,f:7,c:8},lv:"mid",note:"甘く煮た油揚げは糖質・脂質がやや多め。"},
+        {id:"tsukimi",name:"月見（卵）",n:{kcal:76,p:6,f:5,c:0},lv:"good"},
+        {id:"kashiwa",name:"鶏肉",n:{kcal:80,p:10,f:4,c:0},lv:"good"},
+        {id:"tororo",name:"とろろ",n:{kcal:45,p:1.5,f:0.2,c:10}},
+        {id:"sansai",name:"山菜・わかめ",n:{kcal:10,p:0.8,f:0.1,c:2},lv:"good"},
+      ]}]},
+    {id:"udon", name:"うどん", n:{kcal:300,p:9,f:1.5,c:60}, lv:"mid", note:"たんぱく質と野菜が少なめ。卵や鶏肉、わかめを足し、汁は残しましょう。", opts:[
+      {key:"style", label:"食べ方", type:"one", choices:[{id:"kake",name:"かけ",n:Z},{id:"zaru",name:"ざる・ぶっかけ",n:Z},{id:"curry",name:"カレーうどん",n:{kcal:250,p:5,f:12,c:25},lv:"avoid",note:"カレーのルウで脂質と塩分が増えます。"}]},
+      {key:"top", label:"トッピング", type:"many", choices:[
+        {id:"ebiten",name:"えび天2本",n:{kcal:180,p:6,f:11,c:14},lv:"avoid",note:"天ぷらは衣と油で脂質が多め。"},
+        {id:"kakiage",name:"かき揚げ",n:{kcal:350,p:4,f:24,c:30},lv:"avoid",note:"かき揚げは1枚で300kcal以上。"},
+        {id:"kitsune",name:"きつね",n:{kcal:110,p:5,f:7,c:8},lv:"mid"},
+        {id:"niku",name:"肉（牛）",n:{kcal:150,p:8,f:12,c:3},lv:"mid"},
+        {id:"tsukimi",name:"月見（卵）",n:{kcal:76,p:6,f:5,c:0},lv:"good"},
+        {id:"kashiwa",name:"鶏肉",n:{kcal:80,p:10,f:4,c:0},lv:"good"},
+        {id:"wakame",name:"わかめ・ねぎ",n:{kcal:10,p:0.8,f:0.1,c:2},lv:"good"},
+      ]}]},
+    {id:"ramen", name:"ラーメン", n:Z, lv:"avoid", note:"糖質が多く、スープの塩分は1杯で1日の目標を超えることも。スープは残しましょう。", opts:[
+      {key:"taste", label:"味", type:"one", choices:[
+        {id:"shoyu",name:"醤油",n:{kcal:500,p:20,f:12,c:75}},
+        {id:"shio",name:"塩",n:{kcal:470,p:19,f:10,c:72}},
+        {id:"miso",name:"味噌",n:{kcal:560,p:22,f:17,c:80}},
+        {id:"tonkotsu",name:"とんこつ",n:{kcal:650,p:24,f:25,c:75},note:"とんこつは脂質がとても多いスープです。"},
+        {id:"iekei",name:"家系",n:{kcal:750,p:25,f:33,c:78},note:"家系は脂質・塩分ともにトップクラス。"},
+        {id:"tsukemen",name:"つけ麺",n:{kcal:700,p:26,f:18,c:105},note:"つけ麺は麺の量が多め。つけ汁を割らずに残しましょう。"},
+      ]},
+      {key:"soup", label:"スープ", type:"one", choices:[{id:"all",name:"全部飲む",n:Z,hide:true},{id:"leave",name:"残す",short:"スープ残し",n:{kcal:-100,p:-2,f:-8,c:-5},lv:"good"}]},
+      {key:"top", label:"トッピング・追加", type:"many", choices:[
+        {id:"yasai",name:"野菜・もやし増し",n:{kcal:25,p:2,f:0,c:4},lv:"good"},
+        {id:"ajitama",name:"味玉",n:{kcal:80,p:6,f:6,c:1}},
+        {id:"chashu",name:"チャーシュー追加",n:{kcal:150,p:10,f:12,c:1},lv:"mid"},
+        {id:"nori",name:"のり・ねぎ",n:{kcal:5,p:0.5,f:0,c:1}},
+        {id:"oomori",name:"麺大盛り",n:{kcal:200,p:6,f:2,c:40},lv:"avoid",note:"大盛りは麺だけで約200kcal増えます。"},
+        {id:"rice",name:"ライス",n:{kcal:234,p:3.8,f:0.5,c:55.7},lv:"avoid",note:"ラーメン＋ライスは糖質の重ね食べ。"},
+        {id:"gyoza",name:"餃子5個",n:{kcal:250,p:10,f:14,c:22},lv:"avoid"},
+      ]}]},
+    {id:"pasta", name:"パスタ", n:Z, lv:"mid", note:"パスタは量が多くなりがち。サラダを先に食べ、具に鶏肉やツナを。", opts:[
+      {key:"sauce", label:"ソース", type:"one", choices:[
+        {id:"tomato",name:"トマト",n:{kcal:450,p:13,f:9,c:78}},
+        {id:"wafu",name:"和風きのこ",n:{kcal:480,p:13,f:14,c:72}},
+        {id:"meat",name:"ミートソース",n:{kcal:600,p:20,f:18,c:85}},
+        {id:"pepe",name:"ペペロンチーノ",n:{kcal:550,p:13,f:22,c:72},note:"オイルが多めのパスタです。"},
+        {id:"napo",name:"ナポリタン",n:{kcal:650,p:18,f:22,c:90},lv:"avoid",note:"ケチャップと油で糖質・脂質が多め。"},
+        {id:"carbo",name:"カルボナーラ",n:{kcal:750,p:27,f:35,c:80},lv:"avoid",note:"生クリーム・チーズ・ベーコンで脂質がとても多いメニューです。"},
+      ]},
+      {key:"size", label:"量", type:"one", choices:[{id:"half",name:"少なめ",short:"麺少なめ",n:{kcal:-140,p:-5,f:-1,c:-28},lv:"good"},{id:"normal",name:"普通",n:Z,hide:true},{id:"big",name:"大盛り",short:"麺大盛り",n:{kcal:200,p:7,f:1,c:40},lv:"avoid",note:"大盛りは麺だけで約200kcal増えます。"}], def:"normal"},
+      {key:"top", label:"追加", type:"many", choices:[{id:"cheese",name:"粉チーズ",n:{kcal:30,p:2.5,f:2,c:0}},{id:"salad",name:"サラダセット",n:{kcal:30,p:1,f:0,c:5},lv:"good"}]}]},
+    {id:"don", name:"丼もの", n:Z, nameFrom:"kind", lv:"mid", note:"丼はご飯の量が多め。「ご飯少なめ」と、サラダ・みそ汁の追加がおすすめ。", opts:[
+      {key:"kind", label:"種類", type:"one", choices:[
+        {id:"gyudon",name:"牛丼",n:{kcal:650,p:20,f:20,c:95}},
+        {id:"oyako",name:"親子丼",n:{kcal:600,p:25,f:14,c:88}},
+        {id:"kaisen",name:"海鮮丼",n:{kcal:550,p:30,f:6,c:90},lv:"good"},
+        {id:"katsu",name:"カツ丼",n:{kcal:870,p:30,f:28,c:115},lv:"avoid",note:"揚げ物とご飯の組み合わせで、1食で1日の半分以上のカロリーに。"},
+        {id:"ten",name:"天丼",n:{kcal:750,p:20,f:22,c:110},lv:"avoid",note:"揚げ物と甘いタレでカロリーが高め。"},
+      ]},
+      {key:"rice", label:"ご飯の量", type:"one", choices:[{id:"less",name:"少なめ",short:"ご飯少なめ",n:{kcal:-110,p:-1.8,f:-0.2,c:-26},lv:"good"},{id:"normal",name:"普通",n:Z,hide:true},{id:"big",name:"大盛り",short:"ご飯大盛り",n:{kcal:110,p:1.8,f:0.2,c:26},lv:"avoid",note:"大盛りはご飯だけで約110kcal増えます。"}], def:"normal"},
+      {key:"top", label:"追加", type:"many", choices:[{id:"egg",name:"生卵",n:{kcal:76,p:6,f:5,c:0}},{id:"cheese",name:"チーズ",n:{kcal:100,p:6,f:8,c:0},lv:"mid"},{id:"salad",name:"サラダ",n:{kcal:30,p:1,f:0,c:5},lv:"good"},{id:"miso",name:"みそ汁",n:{kcal:45,p:3.5,f:2,c:3},lv:"good"}]}]},
+    {id:"curry-rice", name:"カレーライス（外食）", n:{kcal:750,p:18,f:23,c:113}, lv:"avoid", note:"ルウの脂質とご飯の量で高カロリーに。ご飯少なめ・サラダ付きで。", opts:[
+      {key:"rice", label:"ご飯の量", type:"one", choices:[{id:"less",name:"少なめ",short:"ご飯少なめ",n:{kcal:-110,p:-1.8,f:-0.2,c:-26},lv:"good"},{id:"normal",name:"普通",n:Z,hide:true},{id:"big",name:"大盛り",short:"ご飯大盛り",n:{kcal:110,p:1.8,f:0.2,c:26}}], def:"normal"},
+      {key:"top", label:"トッピング", type:"many", choices:[{id:"katsu",name:"カツ",n:{kcal:350,p:15,f:24,c:15},lv:"avoid",note:"カツカレーは1食で1,000kcalを超えることも。"},{id:"cheese",name:"チーズ",n:{kcal:100,p:6,f:8,c:0}},{id:"yasai",name:"野菜",n:{kcal:40,p:1.5,f:0.3,c:8},lv:"good"},{id:"ontama",name:"温泉卵",n:{kcal:76,p:6,f:5,c:0}}]}]},
+    {id:"yakisoba", name:"焼きそば", n:{kcal:550,p:15,f:22,c:70}, lv:"avoid", note:"油で炒めるため脂質が多め。野菜を多めに入れ、麺は少なめに。"},
+    {id:"chahan", name:"チャーハン", n:{kcal:650,p:15,f:22,c:90}, lv:"avoid", note:"油とご飯が多く、野菜が少ないメニュー。スープとサラダを合わせて。"},
+    {id:"omurice", name:"オムライス", n:{kcal:700,p:20,f:25,c:95}, lv:"avoid", note:"ケチャップライスとバターで脂質・糖質が多め。半分の量がちょうど良いくらいです。"},
+  ],
+  主菜:[
+    {id:"natto", name:"納豆（1パック・たれ付）", n:{kcal:95,p:7.5,f:4.5,c:7}},
+    {id:"tamagoyaki", name:"卵焼き（卵1個）", n:{kcal:97,p:6,f:7,c:2}},
+    {id:"medama", name:"目玉焼き（卵1個）", n:{kcal:89,p:6,f:7,c:0.2}},
+    {id:"yudetamago", name:"ゆで卵（1個）", n:{kcal:71,p:6,f:5,c:0.2}},
+    {id:"hiyayakko", name:"冷ややっこ（100g）", n:{kcal:61,p:5.5,f:3.5,c:3}},
+    {id:"teriyaki", name:"鶏むね照り焼き（80g）", n:{kcal:127,p:19,f:3.5,c:5}},
+    {id:"shogayaki", name:"鶏むね肉の生姜焼き", n:{kcal:182,p:24,f:5,c:10.5}},
+    {id:"salad-chicken", name:"サラダチキン（1個）", n:{kcal:120,p:25,f:1.5,c:1}},
+    {id:"yakizake", name:"焼き鮭（1切れ）", n:{kcal:128,p:15.7,f:7.8,c:0}},
+    {id:"foil", name:"鮭ときのこのホイル焼き", n:{kcal:154,p:19.3,f:7.3,c:5}},
+    {id:"saba-shio", name:"さば塩焼き（80g）", n:{kcal:211,p:20,f:13.6,c:0}},
+    {id:"saba-miso", name:"さば味噌煮（缶詰半分）", n:{kcal:200,p:15,f:13,c:6.5}},
+    {id:"shabu", name:"豚しゃぶ鍋（1人分）", n:{kcal:260,p:26,f:13.1,c:11.5}},
+    {id:"curry", name:"チキンカレー（ルウ部分）", n:{kcal:228,p:16.4,f:8.9,c:20.7}},
+    {id:"chinjao", name:"チンジャオロース風", n:{kcal:190,p:15.2,f:10,c:10}},
+    {id:"hamburg", name:"豆腐入りハンバーグ", n:{kcal:249,p:13.8,f:16.8,c:11.8}},
+    {id:"karaage", name:"鶏の唐揚げ（5個）", n:{kcal:360,p:22,f:24,c:12}, lv:"avoid", note:"揚げ物は衣が油を吸って脂質が多くなります。食べるなら2〜3個に。"},
+    {id:"tonkatsu", name:"とんかつ（1枚）", n:{kcal:450,p:22,f:32,c:15}, lv:"avoid", note:"脂質がとても多いメニュー。キャベツを先にたっぷり食べ、ソースは控えめに。"},
+  ],
+  副菜:[
+    {id:"komatsuna", name:"小松菜のおひたし", n:{kcal:15,p:1.3,f:0.1,c:1.5}},
+    {id:"horenso", name:"ほうれん草のおひたし", n:{kcal:15,p:1.5,f:0.3,c:2}},
+    {id:"broccoli", name:"ブロッコリーのおかか和え", n:{kcal:19,p:2,f:0.3,c:2.6}},
+    {id:"kinpira", name:"きんぴらごぼう（40g）", n:{kcal:50,p:0.8,f:2,c:7}},
+    {id:"hijiki", name:"ひじき煮（40g）", n:{kcal:40,p:1.2,f:1.5,c:5}},
+    {id:"salad", name:"サラダ（ノンオイルドレッシング）", n:{kcal:30,p:1,f:0,c:5}},
+    {id:"onyasai", name:"温野菜（100g）", n:{kcal:30,p:2.5,f:0,c:5}},
+    {id:"tomato", name:"ミニトマト（5個）", n:{kcal:15,p:0.5,f:0,c:3.5}},
+  ],
+  汁物:[
+    {id:"misoshiru-g", name:"具だくさんみそ汁", n:{kcal:70,p:5,f:2.5,c:7}},
+    {id:"misoshiru", name:"みそ汁（豆腐・わかめ）", n:{kcal:45,p:3.5,f:2,c:3}},
+    {id:"wakame", name:"わかめスープ", n:{kcal:15,p:1,f:0.5,c:2}},
+  ],
+  間食:[
+    {id:"yog", name:"無糖ヨーグルト（100g）", n:{kcal:56,p:3.6,f:3,c:4.9}},
+    {id:"almond", name:"素焼きアーモンド（20g）", n:{kcal:122,p:4,f:10.8,c:4}},
+    {id:"banana", name:"バナナ（1本）", n:{kcal:84,p:1,f:0.2,c:20.3}},
+    {id:"cheese", name:"プロセスチーズ（1個）", n:{kcal:56,p:4,f:4.7,c:0.2}},
+    {id:"kashipan", name:"菓子パン（1個）", n:{kcal:400,p:8,f:18,c:52}, lv:"avoid", note:"糖質と脂質の組み合わせで太りやすい代表格。食べるなら週末だけなどルールを決めて。"},
+    {id:"chips", name:"ポテトチップス（60g）", n:{kcal:335,p:3,f:21,c:33}, lv:"avoid", note:"脂質と塩分が多く、量が増えやすいお菓子。小袋を選ぶか、お皿に出す量を決めて。"},
+    {id:"sweet-latte", name:"甘いカフェラテ（加糖）", n:{kcal:200,p:5,f:7,c:30}, lv:"avoid", note:"飲み物の糖分は満腹感がないのにカロリーが増えます。無糖や小さいサイズに。"},
+  ],
+};
+const CATS = Object.keys(FOODS);
+const LV = {good:{t:"おすすめ",cls:"good"},mid:{t:"ほどほどに",cls:"mid"},avoid:{t:"控えめに",cls:"avoid"}};
+function badge(lv){return lv&&LV[lv]?`<span class="lv" data-lv="${LV[lv].cls}">${LV[lv].t}</span>`:"";}
+const QTY_CHIPS = [0.5,1,1.5,2];
+const SLOTS = ["朝","昼","夜","間食"];
+const RICE_CHIPS = [50,80,100,120,150,180,200];
+const DEFAULT_GOALS = {kcal:1400,p:80,f:40,c:190};
+
+// ---------- State ----------
+let db=null, uid=null, persistent=false;
+let goals = {...DEFAULT_GOALS};
+const days = {}; // "YYYY-MM-DD" -> {items:[]}
+let viewDate = ymd(new Date());
+
+// ---------- Helpers ----------
+function ymd(d){const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());}
+function addDays(s,n){const [y,m,d]=s.split("-").map(Number);const t=new Date(y,m-1,d);t.setDate(t.getDate()+n);return ymd(t);}
+function fmt(n){return Math.round(n).toLocaleString("ja-JP");}
+function f1(n){return (Math.round(n*10)/10).toString();}
+function macros(food,amt){const k=food.unit==="g"?amt/100:amt;return{kcal:food.n.kcal*k,p:food.n.p*k,f:food.n.f*k,c:food.n.c*k};}
+const RANK={good:1,"":1,mid:2,avoid:3};
+function defaultSel(food){const o={};(food.opts||[]).forEach(g=>{o[g.key]=g.type==="one"?(g.def||g.choices[0].id):[];});return o;}
+function picked(food,sel){const out=[];(food.opts||[]).forEach(g=>{const v=sel[g.key];g.choices.forEach(c=>{if(g.type==="one"?v===c.id:(v||[]).includes(c.id))out.push({g,c});});});return out;}
+function effective(food,sel){
+  const n={...food.n};const pk=picked(food,sel);let lv=food.lv||"";const notes=[];
+  pk.forEach(({c})=>{n.kcal+=c.n.kcal;n.p+=c.n.p;n.f+=c.n.f;n.c+=c.n.c;});
+  // a chosen "type" choice can set the level outright (e.g. 海鮮丼 good, カツ丼 avoid)
+  pk.forEach(({g,c})=>{if(g.type==="one"&&c.lv&&c.lv!=="good"&&RANK[c.lv]>RANK[lv])lv=c.lv;});
+  const kindGood=pk.find(({g,c})=>g.type==="one"&&g.key==="kind"&&c.lv==="good");if(kindGood&&lv==="mid")lv="good";
+  pk.forEach(({g,c})=>{if(g.type==="many"&&c.lv&&RANK[c.lv]>RANK[lv])lv=c.lv;});
+  pk.forEach(({c})=>{if(c.note)notes.push(c.note);});
+  ["kcal","p","f","c"].forEach(k=>n[k]=Math.max(0,n[k]));
+  const baseName=food.nameFrom?(pk.find(({g})=>g.key===food.nameFrom)?.c.name||food.name):food.name;
+  const ones=pk.filter(({g,c})=>g.type==="one"&&g.key!==food.nameFrom&&!c.hide).map(({c})=>c.short||c.name);const many=pk.filter(({g})=>g.type==="many").map(({c})=>c.name);
+  const label=baseName+(ones.length?`（${ones.join("・")}）`:"")+(many.length?"＋"+many.join("・"):"");
+  return {food:{...food,n},lv,notes,label};
+}
+function amtLabel(food,amt){return food.unit==="g"?amt+"g":(amt===1?"":"×"+amt);}
+function totals(date){const t={kcal:0,p:0,f:0,c:0};(days[date]?.items||[]).forEach(i=>{t.kcal+=i.kcal;t.p+=i.p;t.f+=i.f;t.c+=i.c;});return t;}
+function judge(kcal){if(kcal<=0)return"none";const r=kcal/goals.kcal;if(r<0.85)return"low";if(r<=1.10)return"good";return"over";}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+const $=id=>document.getElementById(id);
+function toast(msg,undo){const t=$("toast");t.textContent=msg;if(undo){const u=document.createElement("button");u.textContent="元に戻す";u.dataset.undo="1";t.appendChild(u);}t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,undo?5000:1800);}
+function wd(s){const [y,m,d]=s.split("-").map(Number);return "日月火水木金土"[new Date(y,m-1,d).getDay()];}
+
+// ---------- Persistence ----------
+const LS_KEY="kotsukotsu-gohan-v1";
+function lsSave(){try{localStorage.setItem(LS_KEY,JSON.stringify({goals,days}));}catch(e){}}
+function lsLoad(){try{const v=JSON.parse(localStorage.getItem(LS_KEY)||"null");if(v){Object.assign(goals,v.goals||{});Object.assign(days,v.days||{});}}catch(e){}}
+const writeChains={};
+function queueWrite(key,fn){const prev=writeChains[key]||Promise.resolve();const next=prev.then(fn).catch(e=>{handleWriteError(e);});writeChains[key]=next;return next;}
+function handleWriteError(e){
+  const code=e&&e.code;
+  if(code==="quota_exceeded")showBanner("保存できる記録の上限に達しました。古い記録を減らすか、作成者に相談してください。","warn");
+  else if(code==="invalid_argument"){persistent=false;showBanner("このアカウントでは記録を保存できません。表示中の記録はページを閉じると消えます。","warn");}
+  else showBanner("保存に失敗しました。通信状態を確認して、もう一度追加してください。","warn");
+}
+function showBanner(msg,kind){const b=$("banner");b.textContent=msg;b.dataset.kind=kind||"";b.hidden=false;}
+const pending={};
+function saveDay(date){
+  lsSave();
+  if(!persistent)return;
+  const items=(days[date]?.items||[]).map(i=>({...i}));
+  pending[date]=(pending[date]||0)+1;
+  queueWrite("d-"+date,()=>db.collection("data/users/"+uid).doc("d-"+date).set({date,items,updatedAt:Date.now()})).finally(()=>{pending[date]--;});
+}
+function saveGoals(){
+  lsSave();
+  if(!persistent)return;
+  queueWrite("settings",()=>db.collection("data/users/"+uid).doc("settings").set({goals:{...goals}}));
+}
+
+// ---------- Render ----------
+function render(){
+  const today=ymd(new Date());
+  const lbl=viewDate===today?"きょう":viewDate===addDays(today,-1)?"きのう":"";
+  const [,m,d]=viewDate.split("-").map(Number);
+  $("dayLabel").innerHTML=(lbl?esc(lbl):`${m}月${d}日`)+`<small>${m}/${d}（${wd(viewDate)}）</small>`;
+  $("next").disabled=viewDate>=today;$("next").style.opacity=viewDate>=today?.35:1;
+
+  const t=totals(viewDate);
+  const pct=goals.kcal?t.kcal/goals.kcal:0;
+  $("kcalNow").textContent=fmt(t.kcal);
+  $("kcalGoal").textContent=`/ ${fmt(goals.kcal)} kcal`;
+  $("kcalPct").textContent=`達成率 ${Math.round(pct*100)}%`;
+  const j=judge(t.kcal);
+  const arc=$("ringArc");const C=351.86;arc.style.strokeDashoffset=String(C*(1-Math.min(pct,1)));
+  arc.setAttribute("stroke",j==="over"?"var(--warn)":"var(--accent)");
+
+  const rows=[["たんぱく質","p","var(--p)"],["脂質","f","var(--f)"],["炭水化物","c","var(--c)"]];
+  $("pfc").innerHTML=rows.map(([n,k,col])=>{const v=t[k],g=goals[k],w=Math.min(100,g?v/g*100:0);
+    return `<div class="bar-row"><span class="lbl">${n}</span><div class="bar"><i style="width:${w}%;background:${col}"></i></div><span class="val num">${f1(v)} / ${g}g（${g?Math.round(v/g*100):0}%）</span></div>`;}).join("");
+
+  const isToday=viewDate===today;
+  let msg="",s="";
+  if(j==="none"){s="";msg=isToday?"まずは1食、記録してみましょう":"この日の記録はありません";}
+  else if(j==="good"){s="good";msg="目標達成！この調子";}
+  else if(j==="over"){s="over";msg=`目標より${fmt(t.kcal-goals.kcal)}kcal多め。明日で調整すればOK`;}
+  else {s="low";msg=isToday?`あと${fmt(goals.kcal-t.kcal)}kcal。たんぱく質を中心に食べましょう`:`少なめの日でした。食べなさすぎに注意`;}
+  const pOk=t.p>=goals.p*0.9;
+  const nAvoid=(days[viewDate]?.items||[]).filter(i=>i.lv==="avoid").length;
+  $("status").innerHTML=`<span class="pill" data-s="${s}">${esc(msg)}</span>`+(nAvoid?`<span class="pill" data-s="over">控えめメニュー ${nAvoid}品</span>`:"")+(t.kcal>0?`<span class="pill" data-s="${pOk?"good":""}">${pOk?"たんぱく質 OK":"たんぱく質 あと"+f1(Math.max(0,goals.p-t.p))+"g"}</span>`:"");
+
+  // streak
+  let streak=0,cur=today;
+  if(!(days[cur]?.items?.length))cur=addDays(cur,-1);
+  while(days[cur]?.items?.length){streak++;cur=addDays(cur,-1);}
+  $("streak").innerHTML=`${streak}<small> 日</small>`;
+  $("streakNote").textContent=streak>=7?"1週間以上つづいています":streak>0?(days[today]?.items?.length?"きょうも記録できました":"きょう記録すると更新"):"1食でも記録すればカウント";
+
+  const done=new Set((days[viewDate]?.items||[]).map(i=>i.slot));
+  $("stamps").innerHTML=["朝","昼","夜"].map(x=>`<span class="stamp ${done.has(x)?"on":""}">${x}</span>`).join("");
+  const n=["朝","昼","夜"].filter(x=>done.has(x)).length;
+  $("stampNote").textContent=n===3?"3食コンプリート！":`あと${3-n}食で3食コンプリート`;
+
+  // meals
+  $("meals").innerHTML=SLOTS.map(slot=>{
+    const its=(days[viewDate]?.items||[]).map((it,idx)=>({it,idx})).filter(x=>x.it.slot===slot);
+    const sk=its.reduce((a,x)=>a+x.it.kcal,0);
+    return `<div class="meal"><div class="meal-h"><div><h2>${slot}${slot==="間食"?"":"ごはん"}</h2><div class="sub num">${its.length?fmt(sk)+" kcal":"未記録"}</div></div><button class="add" data-slot="${slot}">＋ 追加</button></div>`+
+      (its.length?`<ul class="items">${its.map(({it,idx})=>`<li><div class="name">${esc(it.name)} ${badge(it.lv)}<small class="num">P${f1(it.p)} F${f1(it.f)} C${f1(it.c)}</small></div><span class="kc num">${fmt(it.kcal)}kcal</span><button class="del" data-idx="${idx}" aria-label="${esc(it.name)}を削除">削除</button></li>`).join("")}</ul>`:`<div class="empty">${slot==="間食"?"間食は1日1つまでが目安":"食べたものを1品ずつ追加しましょう"}</div>`)+`</div>`;
+  }).join("");
+
+  renderWeek();
+}
+
+function renderWeek(){
+  const today=ymd(new Date());const list=[];for(let i=6;i>=0;i--)list.push(addDays(today,-i));
+  const vals=list.map(d=>totals(d).kcal);
+  const W=340,H=170,padL=36,padB=26,padT=14;
+  const max=Math.max(goals.kcal*1.3,...vals);
+  const y=v=>padT+(H-padT-padB)*(1-v/max);
+  const bw=(W-padL-8)/7;
+  let g=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="最近7日間のカロリー">`;
+  [0,0.5,1].forEach(r=>{const v=Math.round(max*r/100)*100;g+=`<line x1="${padL}" x2="${W-4}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${padL-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--muted)">${v}</text>`;});
+  list.forEach((d,i)=>{const v=vals[i];const j=judge(v);const col=j==="good"?"var(--good)":j==="over"?"var(--warn)":"var(--muted)";
+    const x=padL+i*bw+bw*0.2,w=bw*0.6;
+    if(v>0)g+=`<rect x="${x}" y="${y(v)}" width="${w}" height="${y(0)-y(v)}" rx="4" fill="${col}"/>`;
+    const [,m,dd]=d.split("-").map(Number);
+    g+=`<text x="${x+w/2}" y="${H-8}" text-anchor="middle" font-size="10" fill="${d===viewDate?"var(--fg)":"var(--muted)"}" font-weight="${d===viewDate?700:400}">${dd}(${wd(d)})</text>`;});
+  g+=`<line x1="${padL}" x2="${W-4}" y1="${y(goals.kcal)}" y2="${y(goals.kcal)}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W-4}" y="${y(goals.kcal)-4}" text-anchor="end" font-size="10" fill="var(--accent)" font-weight="700">目標 ${goals.kcal}</text></svg>`;
+  $("weekChart").innerHTML=g;
+  const logged=list.filter(d=>days[d]?.items?.length).length;const good=list.filter(d=>judge(totals(d).kcal)==="good").length;
+  $("weekNote").textContent=`7日間で記録 ${logged}日・目標達成 ${good}日`;
+}
+
+// ---------- Add sheet ----------
+let sheetSlot="朝",sheetCat="主食",added=0;
+function openSheet(slot){sheetSlot=slot;sheetCat=slot==="間食"?"間食":"主食";added=0;$("scrim").hidden=false;$("sheet").hidden=false;renderList();}
+function closeSheet(){$("scrim").hidden=true;$("sheet").hidden=true;}
+function slotChips(){return `<div class="chips" role="group" aria-label="どの食事に追加するか">${SLOTS.map(s=>`<button class="chip" data-setslot="${s}" aria-pressed="${s===sheetSlot}">${s}</button>`).join("")}</div>`;}
+function slotItemsHtml(){const its=(days[viewDate]?.items||[]).map((it,idx)=>({it,idx})).filter(x=>x.it.slot===sheetSlot);if(!its.length)return"";return `<div class="in-sheet"><div class="h">${esc(sheetSlot)}に入っているもの</div>${its.map(({it,idx})=>`<div class="r"><span>${esc(it.name)}</span><span class="kc num">${fmt(it.kcal)}kcal</span><button class="del" data-idx="${idx}" aria-label="${esc(it.name)}を削除">削除</button></div>`).join("")}</div>`;}
+function slotSummary(){const its=(days[viewDate]?.items||[]).filter(i=>i.slot===sheetSlot);const k=its.reduce((a,i)=>a+i.kcal,0);return its.length?`${sheetSlot}：${its.length}品・${fmt(k)}kcal`:`${sheetSlot}：まだ何もありません`;}
+function renderList(){
+  const list=FOODS[sheetCat];
+  $("sheetIn").innerHTML=`<div class="sheet-top"><div class="sheet-h"><h3 id="sheetTitle">食べたものを選ぶ</h3><button class="btn done" data-close>${added?"完了":"閉じる"}</button></div>
+  ${slotChips()}
+  <div class="cats" role="tablist" aria-label="種類">${CATS.map(c=>`<button class="cat" role="tab" data-cat="${c}" aria-selected="${c===sheetCat}">${c}</button>`).join("")}</div></div>
+  <div class="menu-list">${list.map(fd=>{const ef=effective(fd,defaultSel(fd));const m=macros(ef.food,fd.unit==="g"?fd.def:1);const sub=fd.opts?fd.opts.map(g=>g.label).join("・")+"を選べます":fd.unit==="g"?fd.def+"gの場合・グラム数を選べます":"P"+f1(m.p)+" F"+f1(m.f)+" C"+f1(m.c);return `<button class="menu-btn" data-food="${fd.id}"><b>${esc(fd.name)} ${badge(fd.opts?"":fd.lv)}</b><span class="kc num">${fmt(m.kcal)}kcal${fd.opts?"〜":""}</span><small class="num">${esc(sub)}</small></button>`;}).join("")}
+  <button class="menu-btn" data-custom><b>その他（自分で入力）</b><span class="kc"></span><small>カロリーとPFCを入力して追加</small></button></div>
+  ${slotItemsHtml()}
+  <div class="sheet-foot num">${esc(slotSummary())}</div>`;
+}
+let cur=null,amt=1,lastDel=null,listScroll=0,sel={};
+function findFood(id){for(const c of CATS)for(const f of FOODS[c])if(f.id===id)return f;return null;}
+function renderDetail(){
+  const ef=effective(cur,sel);const m=macros(ef.food,amt);const isG=cur.unit==="g";
+  const optHtml=(cur.opts||[]).map(g=>`<div class="opt"><b>${esc(g.label)}${g.type==="many"?'<span class="note">（いくつでも）</span>':""}</b><div class="chips">${g.choices.map(c=>{const on=g.type==="one"?sel[g.key]===c.id:sel[g.key].includes(c.id);const d=c.n.kcal?` <span class="num">${c.n.kcal>0?"+":"−"}${Math.abs(c.n.kcal)}</span>`:"";return `<button class="chip" data-opt="${g.key}" data-choice="${c.id}" aria-pressed="${on}">${esc(c.name)}${d}${c.lv&&c.lv!=="good"?' '+badge(c.lv):""}</button>`;}).join("")}</div></div>`).join("");
+  const head=ef.lv==="good"?"ダイエット向きの組み合わせ":ef.lv==="mid"?"食べ方を工夫すればOK":ef.lv==="avoid"?"ダイエット中はなるべく控えたい組み合わせ":"";
+  const notes=[cur.note,...ef.notes].filter(Boolean);
+  $("sheetIn").innerHTML=`<div class="sheet-h"><button class="x" data-back aria-label="一覧に戻る">‹</button><h3 id="sheetTitle" style="flex:1;margin-left:10px">${esc(cur.name)}</h3></div>
+  <div class="detail">
+  ${optHtml}
+  ${isG?`<div class="rice"><b>量を選ぶ</b><div class="row"><button class="step" data-amt="-10" aria-label="10g減らす">−</button><span class="g num">${amt}g</span><button class="step" data-amt="10" aria-label="10g増やす">＋</button></div><div class="chips">${RICE_CHIPS.map(g=>`<button class="chip" data-amtset="${g}" aria-pressed="${g===amt}">${g}g</button>`).join("")}</div><div class="note">茶碗小盛り約100g・普通盛り約150g・大盛り約200g</div></div>`
+  :cur.opts?"":`<div class="rice"><b>量を選ぶ</b><div class="chips">${QTY_CHIPS.map(q=>`<button class="chip" data-amtset="${q}" aria-pressed="${q===amt}">${q===1?"1人前":q===0.5?"半分":"×"+q}</button>`).join("")}</div></div>`}
+  ${ef.lv&&notes.length?`<div class="caution" data-lv="${ef.lv}"><b>${badge(ef.lv)} ${head}</b>${notes.map(t=>`<p>${esc(t)}</p>`).join("")}</div>`:""}
+  ${cur.opts?`<div class="note">${esc(ef.label)}</div>`:""}
+  <div class="preview num"><div><b>${fmt(m.kcal)}</b><span>kcal</span></div><div><b>${f1(m.p)}</b><span>P（g）</span></div><div><b>${f1(m.f)}</b><span>F（g）</span></div><div><b>${f1(m.c)}</b><span>C（g）</span></div></div>
+  <button class="btn" data-confirm>${esc(sheetSlot)}に追加する</button></div>`;
+}
+function renderCustom(){
+  $("sheetIn").innerHTML=`<div class="sheet-h"><button class="x" data-back aria-label="一覧に戻る">‹</button><h3 id="sheetTitle" style="flex:1;margin-left:10px">自分で入力</h3></div>
+  <form class="custom" id="customForm">
+    <label class="full" for="cName">メニュー名<input id="cName" required maxlength="40" placeholder="例：きつねうどん"></label>
+    <label for="cK">カロリー（kcal）<input id="cK" type="number" inputmode="decimal" min="0" max="3000" required></label>
+    <label for="cP">P（g）<input id="cP" type="number" inputmode="decimal" min="0" max="300" step="0.1" value="0"></label>
+    <label for="cF">F（g）<input id="cF" type="number" inputmode="decimal" min="0" max="300" step="0.1" value="0"></label>
+    <label for="cC">C（g）<input id="cC" type="number" inputmode="decimal" min="0" max="500" step="0.1" value="0"></label>
+    <button class="btn" type="submit" style="grid-column:1/-1">${esc(sheetSlot)}に追加する</button>
+  </form>`;
+  $("customForm").addEventListener("submit",e=>{e.preventDefault();
+    const it={slot:sheetSlot,name:$("cName").value.trim()||"その他",kcal:+$("cK").value||0,p:+$("cP").value||0,f:+$("cF").value||0,c:+$("cC").value||0,amt:1,food:"custom"};
+    addItem(it);});
+}
+function addItem(it){
+  (days[viewDate] ||= {items:[]}).items.push(it);
+  saveDay(viewDate);render();added++;renderList();$("sheetIn").scrollTop=listScroll;toast(`${it.name}を${it.slot}に追加しました`);
+}
+
+// ---------- Events ----------
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.slot){openSheet(b.dataset.slot);return;}
+  if(b.dataset.idx!==undefined){const i=+b.dataset.idx;const it=days[viewDate].items[i];if(!it)return;days[viewDate].items.splice(i,1);lastDel={date:viewDate,i,it};saveDay(viewDate);render();if(!$("sheet").hidden)renderList();toast(`${it.name}を削除しました`,true);return;}
+  if(b.dataset.undo&&lastDel){const {date,i,it}=lastDel;lastDel=null;(days[date] ||= {items:[]}).items.splice(Math.min(i,days[date].items.length),0,it);saveDay(date);render();if(!$("sheet").hidden)renderList();$("toast").hidden=true;return;}
+  if(b.hasAttribute("data-close")){closeSheet();return;}
+  if(b.dataset.setslot){sheetSlot=b.dataset.setslot;renderList();$("sheetIn").scrollTop=0;return;}
+  if(b.dataset.cat){sheetCat=b.dataset.cat;renderList();$("sheetIn").scrollTop=0;return;}
+  if(b.dataset.food){listScroll=$("sheetIn").scrollTop;cur=findFood(b.dataset.food);sel=defaultSel(cur);amt=cur.unit==="g"?cur.def:1;renderDetail();$("sheetIn").scrollTop=0;return;}
+  if(b.hasAttribute("data-custom")){renderCustom();return;}
+  if(b.hasAttribute("data-back")){renderList();$("sheetIn").scrollTop=listScroll;return;}
+  if(b.dataset.amt){amt=Math.max(10,Math.min(500,amt+ +b.dataset.amt));renderDetail();return;}
+  if(b.dataset.opt){const g=cur.opts.find(x=>x.key===b.dataset.opt);const id=b.dataset.choice;if(g.type==="one")sel[g.key]=id;else{const a=sel[g.key];sel[g.key]=a.includes(id)?a.filter(x=>x!==id):[...a,id];}const st=$("sheetIn").scrollTop;renderDetail();$("sheetIn").scrollTop=st;return;}
+  if(b.dataset.amtset!==undefined){amt=+b.dataset.amtset;renderDetail();return;}
+  if(b.hasAttribute("data-confirm")){const ef=effective(cur,sel);const m=macros(ef.food,amt);const al=amtLabel(cur,amt);
+    const base=cur.opts?ef.label:cur.name;
+    const name=cur.unit==="g"?`${base} ${amt}g`:(al?`${base} ${al}`:base);
+    addItem({slot:sheetSlot,name,kcal:+m.kcal.toFixed(1),p:+m.p.toFixed(1),f:+m.f.toFixed(1),c:+m.c.toFixed(1),amt,food:cur.id,lv:ef.lv||""});return;}
+});
+$("scrim").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sheet").hidden)closeSheet();});
+$("prev").addEventListener("click",()=>{viewDate=addDays(viewDate,-1);render();});
+$("next").addEventListener("click",()=>{const t=ymd(new Date());if(viewDate<t){viewDate=addDays(viewDate,1);render();}});
+function fillGoals(){$("gKcal").value=goals.kcal;$("gP").value=goals.p;$("gF").value=goals.f;$("gC").value=goals.c;}
+$("saveGoals").addEventListener("click",()=>{
+  const v={kcal:+$("gKcal").value,p:+$("gP").value,f:+$("gF").value,c:+$("gC").value};
+  if(!(v.kcal>=800&&v.kcal<=4000)){toast("カロリーは800〜4000の間で入力してください");return;}
+  goals={kcal:v.kcal,p:v.p||DEFAULT_GOALS.p,f:v.f||DEFAULT_GOALS.f,c:v.c||DEFAULT_GOALS.c};
+  saveGoals();render();toast("目標を保存しました");
+});
+
+// ---------- Boot ----------
+lsLoad();fillGoals();render();
+(async()=>{
+  if(!window.claude?.use){showBanner("記録はこの端末のこのブラウザに保存されます。別のスマホやパソコンとは共有されません。");return;}
+  const [d,u]=await Promise.all([window.claude.use("db"),window.claude.use("user")]);
+  const id=u?await u.id():null;
+  if(!d||!id){showBanner("サインインしていないため、記録はこの端末のブラウザにだけ保存されます。");return;}
+  db=d;uid=id;persistent=true;
+  const col=db.collection("data/users/"+uid);
+  col.doc("settings").onSnapshot(s=>{if(s.exists&&s.data().goals){goals={...DEFAULT_GOALS,...s.data().goals};fillGoals();render();}},()=>{});
+  const cutoff=addDays(ymd(new Date()),-60);
+  let first=true;
+  col.where("date",">=",cutoff).onSnapshot(snap=>{
+    const seen=new Set();
+    snap.docs.forEach(doc=>{const v=doc.data();if(v&&v.date){seen.add(v.date);if(pending[v.date]>0)return;days[v.date]={items:Array.isArray(v.items)?v.items.map(i=>({...i})):[]};}});
+    // migrate local-only days from before sign-in on first load
+    if(first){first=false;Object.keys(days).forEach(k=>{if(!seen.has(k)&&k>=cutoff&&days[k].items.length)saveDay(k);});}
+    render();
+  },err=>{showBanner("記録の読み込みに失敗しました。ページを開き直してください。","warn");});
+})();
+})();
+</script>
+
+</body>
+</html>
